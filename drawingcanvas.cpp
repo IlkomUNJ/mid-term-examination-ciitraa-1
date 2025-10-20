@@ -9,6 +9,7 @@ DrawingCanvas::DrawingCanvas(QWidget *parent)  {
 
 void DrawingCanvas::clearPoints(){
     m_points.clear();
+    m_detected_points.clear();
     // Trigger a repaint to clear the canvas
     update();
 }
@@ -23,14 +24,30 @@ void DrawingCanvas::paintLines(){
 }
 
 void DrawingCanvas::segmentDetection(){
-    QPixmap pixmap = this->grab(); //
+    bool h_line_raw[3][3] = {{false, false, false}, {true, true, true}, {false, false, false}};
+    bool v_line_raw[3][3] = {{false, true, false}, {false, true, false}, {false, true, false}};
+    bool d1_line_raw[3][3] = {{true, false, false}, {false, true, false}, {false, false, true}};
+    bool d2_line_raw[3][3] = {{false, false, true}, {false, true, false}, {true, false, false}};
+
+    CustomMatrix horizontal_pattern(h_line_raw);
+    CustomMatrix vertical_pattern(v_line_raw);
+    CustomMatrix diagonal1_pattern(d1_line_raw);
+    CustomMatrix diagonal2_pattern(d2_line_raw);
+
+    vector<CustomMatrix> targets;
+    targets.push_back(horizontal_pattern);
+    targets.push_back(vertical_pattern);
+    targets.push_back(diagonal1_pattern);
+    targets.push_back(diagonal2_pattern);
+
+    QPixmap pixmap = this->grab();
     QImage image = pixmap.toImage();
 
     cout << "image width " << image.width() << endl;
     cout << "image height " << image.height() << endl;
 
     //To not crash we set initial size of the matrix
-    vector<CustomMatrix> windows(image.width()*image.height());
+    // vector<CustomMatrix> windows(image.width()*image.height());
 
     // Get the pixel value as an ARGB integer (QRgb is a typedef for unsigned int)
     for(int i = 1; i < image.width()-1;i++){
@@ -45,11 +62,18 @@ void DrawingCanvas::segmentDetection(){
             }
 
             CustomMatrix mat(local_window);
+            // windows.push_back(mat);
 
-            windows.push_back(mat);
+            for(const auto& target : targets){
+                if(mat == target){
+                    m_detected_points.append(QPoint(i, j));
+                    break;
+                }
+            }
         }
     }
-    return;
+    cout << "Deteksi selesai. Ditemukan " << m_detected_points.size() << " segmen." << endl;
+    update();
 }
 
 void DrawingCanvas::paintEvent(QPaintEvent *event){
@@ -85,6 +109,17 @@ void DrawingCanvas::paintEvent(QPaintEvent *event){
         //return painter pen to blue
         pen.setColor(Qt::blue);
         painter.setPen(pen);
+    }
+
+    if (!m_detected_points.isEmpty()) {
+        QPen purplePen(QColor(128, 0, 128));
+        purplePen.setWidth(1);
+        painter.setPen(purplePen);
+        painter.setBrush(QBrush(QColor(128, 0, 128)));
+
+        for (const QPoint& p : std::as_const(m_detected_points)) {
+            painter.drawRect(p.x() - 4, p.y() - 4, 8, 8);
+        }
     }
 }
 

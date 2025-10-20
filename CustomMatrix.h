@@ -9,7 +9,6 @@ class CustomMatrix{
 public:
     bool mat[3][3]={0};
     CustomMatrix(){
-
     }
 
     //alternate way to instantiate the class
@@ -31,6 +30,17 @@ public:
                 mat[i][j] = m[i][j];
             }
         }
+    }
+
+    bool operator==(const CustomMatrix& other) const {
+        for (int i = 0; i < 3; ++i) {
+            for (int j = 0; j < 3; ++j) {
+                if (mat[i][j] != other.mat[i][j]) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 };
 
